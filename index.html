@@ -1,0 +1,588 @@
+<meta charset="utf-8">
+<title>Calcolatore commissioni Airbnb</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+
+<!--
+  CALCOLATORE COMMISSIONI AIRBNB — BNB Tax Genius
+  Dal 13/10/2026 Airbnb passa alla commissione unica a carico host (15,5% + IVA).
+  Prezzo → contatti → risultato. Stessa grafica e stesso impianto del check-up PM.
+  Per il dev: blocco CONFIG nello script (webhook Make, link TidyCal, privacy).
+-->
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=League+Gothic&family=Montserrat:wght@400;500;600;700&display=swap');
+
+.bnb-check{
+  --navy-900:#0c1038;
+  --navy:#1a237e;
+  --navy-ink:#b9bff0;
+  --yellow:#e2be00;
+  --yellow-bright:#ffd426;
+  --gold-deep:#8a7400;
+  --paper:#fbfaf7;
+  --paper-2:#f2efe6;
+  --ink:#16151a;
+  --ink-soft:#57545f;
+  --line:#e5e0d4;
+  --sage:#6baa75;
+  --red:#b8322a;
+  --red-bg:#fbeceb;
+  --amber:#8a6400;
+  --amber-bg:#fdf5dc;
+  --green:#2f7a3c;
+  --green-bg:#e9f4ea;
+
+  --display:"League Gothic","Oswald","Arial Narrow",Impact,sans-serif;
+  --body:"Montserrat",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+
+  background:var(--navy-900);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:16.5px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  position:relative;overflow:hidden;
+  min-height:100vh;
+  padding:0 0 clamp(40px,7vw,80px);
+}
+.bnb-check *,.bnb-check *::before,.bnb-check *::after{box-sizing:border-box;}
+.bnb-check p,.bnb-check h1,.bnb-check h2,.bnb-check h3,.bnb-check ul,.bnb-check li{margin:0;padding:0;}
+.bnb-check ul{list-style:none;}
+.bnb-check img{max-width:100%;height:auto;}
+.bnb-check [hidden]{display:none !important;}
+
+/* bagliore + quadretti che sfumano ai bordi */
+.bnb-check::before{
+  content:"";position:absolute;top:-420px;left:50%;transform:translateX(-50%);
+  width:min(1100px,150vw);height:900px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(226,190,0,.18),rgba(226,190,0,0) 62%);
+}
+.bnb-check::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(to right,rgba(255,255,255,.055) 1px,transparent 1px),
+    linear-gradient(to bottom,rgba(255,255,255,.055) 1px,transparent 1px);
+  background-size:clamp(32px,9vw,52px) clamp(32px,9vw,52px);
+  -webkit-mask-image:radial-gradient(ellipse 78% 55% at 50% 30%,#000 0%,rgba(0,0,0,.35) 55%,transparent 82%);
+  mask-image:radial-gradient(ellipse 78% 55% at 50% 30%,#000 0%,rgba(0,0,0,.35) 55%,transparent 82%);
+}
+.bnb-check > *{position:relative;z-index:2;}
+
+/* ---------- header ---------- */
+.bnb-check .topbar{
+  border-bottom:1px solid rgba(255,255,255,.09);
+}
+.bnb-check .topbar-in{
+  max-width:720px;margin:0 auto;padding:10px 16px;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+}
+.bnb-check .topbar img{height:clamp(26px,6.6vw,32px);width:auto;display:block;}
+.bnb-check .topbar .tag{
+  font-size:.62rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--yellow-bright);
+}
+
+.bnb-check .stage{max-width:640px;margin:0 auto;padding:clamp(26px,5vw,48px) 16px 0;}
+
+/* ---------- tipografia ---------- */
+.bnb-check h1,.bnb-check h2{
+  font-family:var(--display);font-weight:400;text-transform:uppercase;
+  letter-spacing:.012em;line-height:.95;text-wrap:balance;
+}
+.bnb-check h1{font-size:clamp(2.3rem,9vw,3.9rem);color:#fff;text-align:center;}
+.bnb-check h1 .ac{color:var(--yellow-bright);}
+.bnb-check .lead{
+  color:var(--navy-ink);text-align:center;max-width:46ch;margin:18px auto 0;
+  font-size:clamp(.95rem,3.6vw,1.06rem);
+}
+.bnb-check .badge{
+  display:table;margin:0 auto 16px;font-weight:700;
+  font-size:.64rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--yellow-bright);border:1px solid rgba(226,190,0,.45);border-radius:100px;
+  padding:7px 14px;
+}
+
+/* ---------- intro ---------- */
+.bnb-check .hero-photo{
+  width:clamp(130px,34vw,200px);margin:0 auto 0;
+  filter:drop-shadow(0 26px 44px rgba(0,0,0,.6));
+}
+.bnb-check .hero-photo img{display:block;width:100%;}
+.bnb-check .facts{
+  display:flex;justify-content:center;flex-wrap:wrap;gap:8px 22px;margin:26px 0 0;
+  font-size:.74rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#fff;
+}
+.bnb-check .facts span{display:inline-flex;align-items:center;gap:7px;}
+.bnb-check .facts svg{width:16px;height:16px;color:var(--yellow-bright);}
+
+/* ---------- card ---------- */
+.bnb-check .card{
+  background:#fff;border-radius:10px;
+  padding:clamp(22px,4.4vw,34px);
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.6);
+}
+
+/* ---------- progresso ---------- */
+.bnb-check .progress{display:flex;align-items:center;gap:12px;margin-bottom:22px;}
+.bnb-check .bar{flex:1;height:6px;border-radius:6px;background:var(--paper-2);overflow:hidden;}
+.bnb-check .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#eec600,#d3ae00);transition:width .3s ease;}
+.bnb-check .count{font-size:.7rem;font-weight:700;letter-spacing:.1em;color:var(--ink-soft);white-space:nowrap;}
+.bnb-check .block-name{
+  font-size:.66rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-deep);
+  margin-bottom:8px;
+}
+.bnb-check .q{
+  font-family:var(--body);font-weight:700;font-size:clamp(1.12rem,4.4vw,1.32rem);line-height:1.32;color:var(--ink);
+}
+.bnb-check .help{font-size:.86rem;color:var(--ink-soft);margin-top:8px;line-height:1.5;}
+
+/* ---------- opzioni ---------- */
+.bnb-check .opts{display:flex;flex-direction:column;gap:10px;margin-top:20px;}
+.bnb-check .opt{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+  font-family:var(--body);font-size:.98rem;font-weight:500;color:var(--ink);line-height:1.35;
+  background:var(--paper);border:1.5px solid var(--line);border-radius:7px;
+  padding:14px 16px;transition:border-color .14s ease,background .14s ease,transform .14s ease;
+}
+@media (hover:hover){.bnb-check .opt:hover{border-color:var(--navy);background:#fff;}}
+.bnb-check .opt:active{transform:scale(.99);}
+.bnb-check .opt:focus-visible{outline:3px solid var(--yellow);outline-offset:1px;}
+.bnb-check .opt .mk{
+  width:20px;height:20px;flex:0 0 auto;border:2px solid #c9c3b4;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;transition:all .14s ease;
+}
+.bnb-check .opt.multi .mk{border-radius:5px;}
+.bnb-check .opt .mk svg{width:12px;height:12px;color:#fff;opacity:0;}
+.bnb-check .opt[aria-checked="true"]{border-color:var(--navy);background:#fff;}
+.bnb-check .opt[aria-checked="true"] .mk{background:var(--navy);border-color:var(--navy);}
+.bnb-check .opt[aria-checked="true"] .mk svg{opacity:1;}
+
+.bnb-check .nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px;}
+.bnb-check .back{
+  background:none;border:0;cursor:pointer;font-family:var(--body);font-size:.84rem;font-weight:600;
+  color:var(--ink-soft);padding:8px 2px;display:inline-flex;align-items:center;gap:6px;
+}
+.bnb-check .back svg{width:15px;height:15px;}
+.bnb-check .back:hover{color:var(--navy);}
+
+/* ---------- pulsanti ---------- */
+.bnb-check .btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;cursor:pointer;border:0;
+  font-family:var(--display);font-weight:400;line-height:1.2;
+  font-size:clamp(1.28rem,5.6vw,1.7rem);
+  -webkit-text-stroke:.6px currentColor;
+  letter-spacing:.045em;text-transform:uppercase;text-align:center;text-decoration:none;
+  color:var(--ink);
+  background:linear-gradient(180deg,#ffdc4a 0%,#eec600 52%,#d3ae00 100%);
+  border-radius:8px;padding:15px 24px;
+  box-shadow:0 12px 28px -10px rgba(226,190,0,.55),
+             inset 0 1px 0 rgba(255,255,255,.55),
+             inset 0 -2px 0 rgba(138,116,0,.3);
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+}
+.bnb-check .btn:hover{transform:translateY(-2px);filter:brightness(1.05);}
+.bnb-check .btn:active{transform:translateY(1px);}
+.bnb-check .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;filter:none;}
+.bnb-check .btn .arw{display:inline-flex;transition:transform .18s ease;}
+.bnb-check .btn .arw svg{width:17px;height:17px;display:block;}
+.bnb-check .btn:hover .arw{transform:translateX(3px);}
+.bnb-check .btn:focus-visible{outline:3px solid #fff;outline-offset:3px;}
+.bnb-check .btn-sm{width:auto;font-size:1.15rem;padding:10px 20px;}
+.bnb-check .btn-intro{max-width:400px;margin:30px auto 0;}
+
+/* ---------- form contatti ---------- */
+.bnb-check .teaser{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:20px 0 22px;
+}
+.bnb-check .teaser div{
+  border-radius:8px;padding:14px 8px;text-align:center;background:var(--paper);border:1px solid var(--line);
+}
+.bnb-check .teaser b{
+  display:block;font-family:var(--display);font-weight:400;font-size:2.5rem;line-height:1;
+  filter:blur(7px);user-select:none;
+}
+.bnb-check .teaser span{display:block;font-size:.58rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-top:6px;}
+.bnb-check .teaser .r b{color:var(--red);}
+.bnb-check .teaser .y b{color:var(--amber);}
+.bnb-check .teaser .g b{color:var(--green);}
+
+.bnb-check form{display:flex;flex-direction:column;gap:12px;}
+.bnb-check label.fl{
+  display:block;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:6px;
+}
+.bnb-check input[type="text"],.bnb-check input[type="email"],.bnb-check input[type="tel"]{
+  width:100%;font-family:var(--body);font-size:1rem;color:var(--ink);
+  background:var(--paper);border:1.5px solid var(--line);border-radius:5px;
+  padding:13px 14px;line-height:1.3;transition:border-color .14s ease;
+}
+.bnb-check input:focus{border-color:var(--navy);outline:none;}
+.bnb-check input:focus-visible{outline:3px solid var(--yellow);outline-offset:1px;}
+.bnb-check .consent{
+  display:flex;gap:10px;align-items:flex-start;font-size:.74rem;line-height:1.45;color:var(--ink-soft);cursor:pointer;
+}
+.bnb-check .consent input{width:19px;height:19px;margin:2px 0 0;flex:0 0 auto;accent-color:var(--navy);}
+.bnb-check .consent a{color:var(--navy);}
+.bnb-check .err{color:var(--red);font-size:.78rem;font-weight:600;min-height:1em;}
+.bnb-check .small{font-size:.74rem;color:var(--ink-soft);text-align:center;line-height:1.5;}
+
+/* ---------- risultati ---------- */
+.bnb-check .res-head{text-align:center;}
+.bnb-check .res-head h2{font-size:clamp(2.1rem,8.4vw,3.2rem);color:#fff;}
+.bnb-check .res-head p{color:var(--navy-ink);margin-top:12px;font-size:.98rem;}
+.bnb-check .score{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:24px 0 18px;
+}
+.bnb-check .score div{border-radius:8px;padding:14px 6px;text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);}
+.bnb-check .score b{display:block;font-family:var(--display);font-weight:400;font-size:2.6rem;line-height:1;}
+.bnb-check .score span{display:block;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-ink);margin-top:6px;}
+.bnb-check .score .r b{color:#ff8a80;}
+.bnb-check .score .y b{color:var(--yellow-bright);}
+.bnb-check .score .g b{color:#9ad6a3;}
+
+.bnb-check .findings{display:flex;flex-direction:column;gap:12px;}
+.bnb-check .f{
+  background:#fff;border-radius:8px;padding:18px 18px 18px 16px;
+  border-left:5px solid var(--line);display:flex;gap:14px;align-items:flex-start;
+}
+.bnb-check .f .ico{
+  width:32px;height:32px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+}
+.bnb-check .f .ico svg{width:17px;height:17px;}
+.bnb-check .f .lvl{font-size:.6rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;}
+.bnb-check .f h3{font-size:1rem;font-weight:700;line-height:1.35;margin:3px 0 6px;color:var(--ink);}
+.bnb-check .f p{font-size:.9rem;line-height:1.55;color:var(--ink-soft);}
+.bnb-check .f.rosso{border-left-color:var(--red);}
+.bnb-check .f.rosso .ico{background:var(--red-bg);color:var(--red);}
+.bnb-check .f.rosso .lvl{color:var(--red);}
+.bnb-check .f.giallo{border-left-color:#d9ab00;}
+.bnb-check .f.giallo .ico{background:var(--amber-bg);color:var(--amber);}
+.bnb-check .f.giallo .lvl{color:var(--amber);}
+.bnb-check .f.verde{border-left-color:var(--sage);}
+.bnb-check .f.verde .ico{background:var(--green-bg);color:var(--green);}
+.bnb-check .f.verde .lvl{color:var(--green);}
+
+.bnb-check .offer{
+  margin-top:26px;background:var(--paper-2);border-radius:10px;padding:clamp(22px,4.4vw,32px);text-align:center;
+  border:2px solid var(--yellow);
+}
+.bnb-check .offer .kicker{font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-deep);}
+.bnb-check .offer h3{
+  font-family:var(--display);font-weight:400;text-transform:uppercase;letter-spacing:.012em;
+  font-size:clamp(1.9rem,7vw,2.5rem);line-height:.95;color:var(--navy);margin:8px 0 10px;
+}
+.bnb-check .offer p{font-size:.93rem;color:var(--ink-soft);max-width:46ch;margin:0 auto;}
+.bnb-check .offer ul{display:flex;flex-direction:column;gap:7px;margin:16px auto 0;max-width:380px;text-align:left;}
+.bnb-check .offer li{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;line-height:1.45;}
+.bnb-check .offer li svg{width:16px;height:16px;flex:0 0 auto;margin-top:3px;color:var(--gold-deep);}
+.bnb-check .offer .price{
+  font-family:var(--display);font-size:2.4rem;line-height:1;color:var(--ink);margin:18px 0 4px;letter-spacing:.02em;
+}
+.bnb-check .offer .price small{font-family:var(--body);font-size:.74rem;color:var(--ink-soft);letter-spacing:0;}
+.bnb-check .offer .btn{margin-top:16px;}
+.bnb-check .offer .after{font-size:.76rem;color:var(--ink-soft);margin-top:12px;}
+
+.bnb-check .disclaimer{font-size:.72rem;color:var(--navy-ink);text-align:center;margin-top:22px;line-height:1.5;opacity:.85;}
+.bnb-check .preview-note{
+  font-size:.72rem;color:var(--navy-900);background:var(--yellow-bright);border-radius:6px;
+  padding:8px 12px;text-align:center;margin-top:14px;font-weight:600;
+}
+
+/* comparsa morbida a ogni cambio schermata */
+.bnb-check .fade{animation:bnbFade .32s ease both;}
+@keyframes bnbFade{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){
+  .bnb-check .fade{animation:none;}
+  .bnb-check .bar i{transition:none;}
+}
+</style>
+<style>
+/* ---------- aggiunte calcolatore ---------- */
+.bnb-check .field + .field{margin-top:18px;}
+.bnb-check .field .q{display:block;}
+.bnb-check .field .q{font-size:clamp(1.02rem,4vw,1.15rem);}
+.bnb-check .money{position:relative;margin-top:10px;}
+.bnb-check .money input{
+  width:100%;font-family:var(--body);font-size:1.25rem;font-weight:600;color:var(--ink);
+  background:var(--paper);border:1.5px solid var(--line);border-radius:6px;
+  padding:13px 14px 13px 40px;line-height:1.3;
+}
+.bnb-check .money input:focus{border-color:var(--navy);outline:none;}
+.bnb-check .money .unit{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  font-weight:700;color:var(--ink-soft);font-size:1.1rem;
+}
+.bnb-check .money.nights input{padding-left:14px;}
+.bnb-check .seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.bnb-check .seg button{
+  font-family:var(--body);font-size:.92rem;font-weight:600;color:var(--ink);line-height:1.3;
+  background:var(--paper);border:1.5px solid var(--line);border-radius:7px;padding:12px 10px;cursor:pointer;
+}
+.bnb-check .seg button small{display:block;font-weight:500;font-size:.72rem;color:var(--ink-soft);margin-top:2px;}
+.bnb-check .seg button[aria-pressed="true"]{border-color:var(--navy);background:#fff;box-shadow:inset 0 0 0 1px var(--navy);}
+.bnb-check .card .btn{margin-top:24px;}
+
+.bnb-check .big{
+  margin-top:24px;background:#fff;border-radius:10px;padding:clamp(20px,4.4vw,30px);text-align:center;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.6);
+}
+.bnb-check .big .kicker{font-size:.64rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-deep);}
+.bnb-check .big .num{
+  font-family:var(--display);font-size:clamp(3.4rem,15vw,4.8rem);line-height:1;color:var(--navy);margin:8px 0 4px;letter-spacing:.01em;
+}
+.bnb-check .big .num.blur{filter:blur(9px);user-select:none;}
+.bnb-check .big p{font-size:.92rem;color:var(--ink-soft);max-width:40ch;margin:0 auto;}
+.bnb-check .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.bnb-check .tiles div{border-radius:8px;padding:14px 8px;text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);}
+.bnb-check .tiles b{display:block;font-family:var(--display);font-weight:400;font-size:2.3rem;line-height:1;color:#fff;}
+.bnb-check .tiles .neg b{color:#ff8a80;}
+.bnb-check .tiles span{display:block;font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-ink);margin-top:6px;}
+.bnb-check .compare{width:100%;border-collapse:collapse;margin-top:18px;font-size:.88rem;background:#fff;border-radius:8px;overflow:hidden;}
+.bnb-check .compare th,.bnb-check .compare td{padding:10px 12px;text-align:right;border-bottom:1px solid var(--line);}
+.bnb-check .compare th:first-child,.bnb-check .compare td:first-child{text-align:left;color:var(--ink-soft);}
+.bnb-check .compare thead th{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);background:var(--paper-2);}
+.bnb-check .compare tr.tot td{font-weight:700;color:var(--ink);border-bottom:0;}
+.bnb-check .compare td.new{color:var(--navy);font-weight:600;}
+.bnb-check .question{
+  margin-top:22px;border-left:4px solid var(--yellow);padding:4px 0 4px 16px;color:#fff;font-size:.98rem;line-height:1.55;
+}
+.bnb-check .question b{color:var(--yellow-bright);font-weight:600;}
+</style>
+
+<div class="bnb-check" id="bnb-check">
+
+  <header class="topbar">
+    <div class="topbar-in">
+      <img src="bnb-logo-chiaro.png" alt="BNB Tax Genius" width="146" height="120">
+      <span class="tag">Calcolatore Airbnb</span>
+    </div>
+  </header>
+
+  <!-- 1 · INTRO + DATI -->
+  <section class="stage fade" data-screen="input">
+    <div class="hero-photo"><img src="lorenzo-stagno-hero.webp" alt="Lorenzo Stagno, commercialista di BNB Tax Genius" width="272" height="300"></div>
+    <span class="badge">Dal 13 ottobre 2026</span>
+    <h1>Airbnb cambia le commissioni. <span class="ac">Il tuo prezzo è ancora giusto?</span></h1>
+    <p class="lead">Airbnb adegua i prezzi da solo, ma non tiene conto di IVA e cedolare. Inserisci il tuo prezzo di oggi: ti diciamo quanto perdi e qual è il prezzo che tiene in piedi il tuo netto.</p>
+
+    <div class="card" style="margin-top:28px">
+      <div class="field">
+        <label class="q" for="bnb-prezzo">Quanto paga l'ospite per una notte, oggi?</label>
+        <p class="help">Il prezzo finale che vede l'ospite su Airbnb, commissioni comprese.</p>
+        <div class="money"><span class="unit">€</span><input id="bnb-prezzo" type="number" inputmode="decimal" min="1" step="1" placeholder="100"></div>
+      </div>
+      <div class="field">
+        <label class="q" for="bnb-notti">Quante notti vendi in un anno su Airbnb?</label>
+        <p class="help">Una stima va benissimo.</p>
+        <div class="money nights"><input id="bnb-notti" type="number" inputmode="numeric" min="1" step="1" placeholder="180"></div>
+      </div>
+      <div class="field">
+        <p class="q" id="bnb-ced-l">Che cedolare paghi su questo immobile?</p>
+        <div class="seg" role="group" aria-labelledby="bnb-ced-l">
+          <button type="button" data-ced="0.21" aria-pressed="true">21%<small>primo immobile</small></button>
+          <button type="button" data-ced="0.26" aria-pressed="false">26%<small>secondo immobile</small></button>
+        </div>
+      </div>
+      <p class="err" id="bnb-err1" role="alert"></p>
+      <button class="btn" type="button" data-action="calc">Calcola<span class="arw"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 10h11.5M11 5l4.5 5-4.5 5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+    </div>
+  </section>
+
+  <!-- 2 · CONTATTI -->
+  <section class="stage" data-screen="gate" hidden>
+    <div class="card fade">
+      <p class="block-name">Calcolo pronto</p>
+      <p class="q">Ecco quanto perdi in un anno se non cambi niente</p>
+      <div class="big" style="box-shadow:none;background:var(--paper);margin-top:16px">
+        <p class="kicker">Netto in meno all'anno</p>
+        <p class="num blur" aria-hidden="true">−0.000 €</p>
+        <p>Lasciaci nome ed email per vedere il risultato.</p>
+      </div>
+      <form id="bnb-form" novalidate style="margin-top:18px">
+        <div><label class="fl" for="bnb-nome">Nome</label><input id="bnb-nome" name="nome" type="text" autocomplete="given-name" required></div>
+        <div><label class="fl" for="bnb-email">Email</label><input id="bnb-email" name="email" type="email" autocomplete="email" required></div>
+        <label class="consent"><input type="checkbox" name="privacy" id="bnb-privacy"><span>Acconsento al trattamento dei miei dati e dichiaro di aver preso visione della <a id="bnb-privacy-link" href="/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+        <p class="err" id="bnb-err" role="alert"></p>
+        <button class="btn" type="submit">Vedi il risultato<span class="arw"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 10h11.5M11 5l4.5 5-4.5 5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+        <p class="small">Niente spam. Ti scriviamo solo per questo calcolo.</p>
+      </form>
+      <div class="nav"><button class="back" type="button" data-action="back"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 10H5M9 5l-4.5 5L9 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Modifica i dati</button></div>
+    </div>
+  </section>
+
+  <!-- 3 · RISULTATO -->
+  <section class="stage" data-screen="result" hidden>
+    <div class="fade">
+      <div class="res-head">
+        <span class="badge">Il tuo calcolo</span>
+        <h2 id="bnb-r-title"></h2>
+        <p id="bnb-r-sub"></p>
+      </div>
+
+      <div class="big">
+        <p class="kicker">Il prezzo che tiene il tuo netto</p>
+        <p class="num" id="bnb-r-price"></p>
+        <p id="bnb-r-price-note"></p>
+      </div>
+
+      <div class="tiles" style="margin-top:12px">
+        <div class="neg"><b id="bnb-r-night"></b><span>A notte, se non cambi</span></div>
+        <div class="neg"><b id="bnb-r-year"></b><span>In un anno</span></div>
+      </div>
+
+      <table class="compare">
+        <thead><tr><th>Una notte</th><th>Fino al 12/10</th><th>Dal 13/10</th></tr></thead>
+        <tbody id="bnb-r-table"></tbody>
+      </table>
+
+      <p class="question">Il conto dice <b>quanto</b> dovresti alzare il prezzo. La vera domanda è un'altra: <b>il tuo mercato accetterebbe quell'aumento?</b> È una valutazione da fare caso per caso.</p>
+
+      <div class="offer">
+        <p class="kicker">Parliamone</p>
+        <h3>Guardiamo insieme i tuoi numeri</h3>
+        <p>In 15 minuti con Lorenzo capisci se conviene alzare i prezzi, assorbire la differenza o rivedere come sei impostato.</p>
+        <a class="btn" id="bnb-call" href="#" target="_blank" rel="noopener">Prenota la chiamata con Lorenzo<span class="arw"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 10h11.5M11 5l4.5 5-4.5 5" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg></span></a>
+        <p class="after">La chiamata conoscitiva è gratuita.</p>
+        <p class="preview-note" id="bnb-preview" hidden>Anteprima: il webhook non è configurato, i dati non sono stati inviati.</p>
+      </div>
+      <p class="disclaimer">Calcolo indicativo su una prenotazione tipo, con le percentuali Airbnb comunicate per il 13 ottobre 2026. Non sostituisce l'analisi della tua situazione.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  /* =========================================================
+     CONFIG — da compilare prima della messa online
+     ========================================================= */
+  var CONFIG = {
+    webhookUrl: 'https://hook.eu2.make.com/bcjie3hrsvmhmg0k4stjm3549lh385ul',   // webhook Make → contatto systeme.io + tag. Vuoto = anteprima
+    callUrl: 'https://tidycal.com/bnbtaxgenius/consulenza-per-affitti-brevi',
+    privacyUrl: '/privacy-policy',
+    tag: 'calcolatore-airbnb'
+  };
+
+  /* =========================================================
+     PERCENTUALI — dalla tabella di Lorenzo (newsletter 21/07/2026).
+     ⚠️ Da confermare con Lorenzo prima di andare online:
+     la commissione host di oggi è senza IVA (come nella sua tabella),
+     quella nuova include l'IVA.
+     ========================================================= */
+  var R = {
+    feeOspiteOggi: 0.15,           // commissione pagata dall'ospite, fino al 12/10
+    feeHostOggi:   0.03,           // commissione host, fino al 12/10
+    feeHostNuova:  0.155 * 1.22    // 15,5% + IVA = 18,91%, dal 13/10
+  };
+
+  /* Su una notte pagata P dall'ospite:
+     oggi   → base cedolare = P − commissione ospite; netto = P − comm. ospite − comm. host − cedolare
+     dal 13 → base cedolare = P;                       netto = P − comm. host nuova − cedolare
+     Prezzo che tiene il netto = netto di oggi ÷ (1 − comm. host nuova − cedolare)   (formula di Lorenzo) */
+  function calcola(P, ced){
+    var o = { ospite:P*R.feeOspiteOggi, host:P*R.feeHostOggi };
+    o.base = P - o.ospite; o.ced = o.base*ced; o.netto = P - o.ospite - o.host - o.ced;
+    var n = { ospite:0, host:P*R.feeHostNuova, base:P };
+    n.ced = P*ced; n.netto = P - n.host - n.ced;
+    var prezzo = o.netto / (1 - R.feeHostNuova - ced);
+    return { oggi:o, nuovo:n, perdita:o.netto - n.netto, prezzo:prezzo, aumento:prezzo/P - 1 };
+  }
+
+  var root = document.getElementById('bnb-check');
+  var ced = 0.21, dati = null;
+  var eur = function(x, d){ return x.toLocaleString('it-IT', { minimumFractionDigits:d, maximumFractionDigits:d }) + ' €'; };
+
+  function show(name){
+    root.querySelectorAll('[data-screen]').forEach(function(s){ s.hidden = s.getAttribute('data-screen') !== name; });
+    var top = root.getBoundingClientRect().top + window.pageYOffset;
+    if (window.pageYOffset > top) window.scrollTo({ top:top, behavior:'smooth' });
+  }
+
+  root.querySelectorAll('[data-ced]').forEach(function(b){
+    b.addEventListener('click', function(){
+      ced = parseFloat(b.getAttribute('data-ced'));
+      root.querySelectorAll('[data-ced]').forEach(function(x){ x.setAttribute('aria-pressed', x === b); });
+    });
+  });
+
+  root.addEventListener('click', function(e){
+    var a = e.target.closest('[data-action]');
+    if (!a) return;
+    var act = a.getAttribute('data-action');
+    if (act === 'back') show('input');
+    if (act === 'calc') {
+      var P = parseFloat(String(document.getElementById('bnb-prezzo').value).replace(',', '.'));
+      var N = parseInt(document.getElementById('bnb-notti').value, 10);
+      var err = document.getElementById('bnb-err1');
+      if (!(P > 0)) { err.textContent = 'Scrivi quanto paga l\'ospite per una notte.'; return; }
+      if (!(N > 0 && N <= 366)) { err.textContent = 'Scrivi quante notti vendi in un anno (fino a 366).'; return; }
+      err.textContent = '';
+      dati = { P:P, N:N, ced:ced, r:calcola(P, ced) };
+      show('gate');
+    }
+  });
+
+  document.getElementById('bnb-privacy-link').href = CONFIG.privacyUrl;
+  document.getElementById('bnb-call').href = CONFIG.callUrl;
+
+  document.getElementById('bnb-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var nome = this.nome.value.trim(), email = this.email.value.trim();
+    var err = document.getElementById('bnb-err');
+    if (!nome) { err.textContent = 'Scrivi il tuo nome.'; this.nome.focus(); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Controlla l\'email.'; this.email.focus(); return; }
+    if (!this.privacy.checked) { err.textContent = 'Serve il consenso alla privacy per continuare.'; return; }
+    err.textContent = '';
+
+    var r = dati.r;
+    var data = new URLSearchParams();
+    data.append('nome', nome);
+    data.append('email', email);
+    data.append('tags', CONFIG.tag);
+    data.append('prezzo_notte', dati.P.toFixed(2));
+    data.append('notti_anno', dati.N);
+    data.append('cedolare', Math.round(dati.ced*100) + '%');
+    data.append('netto_oggi', r.oggi.netto.toFixed(2));
+    data.append('netto_nuovo', r.nuovo.netto.toFixed(2));
+    data.append('perdita_notte', r.perdita.toFixed(2));
+    data.append('perdita_anno', (r.perdita*dati.N).toFixed(0));
+    data.append('prezzo_consigliato', r.prezzo.toFixed(2));
+    data.append('aumento_pct', (r.aumento*100).toFixed(1));
+    var qs = new URLSearchParams(location.search);
+    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){ if (qs.get(k)) data.append(k, qs.get(k)); });
+    data.append('pagina', location.href.split('?')[0]);
+
+    if (CONFIG.webhookUrl) {
+      fetch(CONFIG.webhookUrl, { method:'POST', mode:'no-cors', body:data, keepalive:true }).catch(function(){});
+    } else {
+      document.getElementById('bnb-preview').hidden = false;
+    }
+    if (window.fbq) window.fbq('track', 'Lead', { content_name:CONFIG.tag });
+    renderResult();
+  });
+
+  function renderResult(){
+    var r = dati.r, N = dati.N;
+    document.getElementById('bnb-r-title').textContent = 'Perdi ' + eur(r.perdita*N, 0) + ' all\'anno';
+    document.getElementById('bnb-r-sub').textContent = 'Se dal 13 ottobre l\'ospite paga ancora ' + eur(dati.P, 0) + ' a notte, il tuo netto scende così.';
+    document.getElementById('bnb-r-price').textContent = eur(r.prezzo, 0);
+    document.getElementById('bnb-r-price-note').textContent = 'a notte, pagato dall\'ospite: +' + (r.aumento*100).toLocaleString('it-IT', { maximumFractionDigits:1 }) + '% rispetto a oggi. Con questo prezzo il tuo netto resta di ' + eur(r.oggi.netto, 2) + '.';
+    document.getElementById('bnb-r-night').textContent = '−' + eur(r.perdita, 2);
+    document.getElementById('bnb-r-year').textContent = '−' + eur(r.perdita*N, 0);
+    var c = Math.round(dati.ced*100);
+    var rows = [
+      ['Pagato dall\'ospite', dati.P, dati.P],
+      ['Commissione pagata dall\'ospite', r.oggi.ospite, r.nuovo.ospite],
+      ['Commissione pagata da te', r.oggi.host, r.nuovo.host],
+      ['Base della cedolare', r.oggi.base, r.nuovo.base],
+      ['Cedolare secca (' + c + '%)', r.oggi.ced, r.nuovo.ced]
+    ];
+    var h = rows.map(function(x){ return '<tr><td>' + x[0] + '</td><td>' + eur(x[1], 2) + '</td><td class="new">' + eur(x[2], 2) + '</td></tr>'; }).join('');
+    h += '<tr class="tot"><td>Il tuo netto</td><td>' + eur(r.oggi.netto, 2) + '</td><td class="new">' + eur(r.nuovo.netto, 2) + '</td></tr>';
+    document.getElementById('bnb-r-table').innerHTML = h;
+    show('result');
+  }
+})();
+</script>
