@@ -321,6 +321,9 @@
   background:var(--paper);border:1.5px solid var(--line);border-radius:7px;padding:12px 10px;cursor:pointer;
 }
 .bnb-check .seg button small{display:block;font-weight:500;font-size:.72rem;color:var(--ink-soft);margin-top:2px;}
+.bnb-check .seg button.full{grid-column:1/-1;}
+.bnb-check .piva-note{margin-top:22px;background:#fff;border-radius:10px;padding:clamp(20px,4.4vw,30px);font-size:.95rem;line-height:1.6;color:var(--ink-soft);box-shadow:0 30px 60px -30px rgba(0,0,0,.6);}
+.bnb-check .piva-note b{color:var(--ink);}
 .bnb-check .seg button[aria-pressed="true"]{border-color:var(--navy);background:#fff;box-shadow:inset 0 0 0 1px var(--navy);}
 .bnb-check .card .btn{margin-top:24px;}
 
@@ -383,6 +386,7 @@
         <div class="seg" role="group" aria-labelledby="bnb-ced-l">
           <button type="button" data-ced="0.21" aria-pressed="true">21%<small>primo immobile</small></button>
           <button type="button" data-ced="0.26" aria-pressed="false">26%<small>secondo immobile</small></button>
+          <button type="button" class="full" data-ced="piva" aria-pressed="false">Ho la partita IVA<small>impresa, forfettario o ordinario</small></button>
         </div>
       </div>
       <p class="err" id="bnb-err1" role="alert"></p>
@@ -394,11 +398,11 @@
   <section class="stage" data-screen="gate" hidden>
     <div class="card fade">
       <p class="block-name">Calcolo pronto</p>
-      <p class="q">Ecco quanto perdi in un anno se non cambi niente</p>
-      <div class="big" style="box-shadow:none;background:var(--paper);margin-top:16px">
+      <p class="q" id="bnb-g-title">Ecco quanto perdi in un anno se non cambi niente</p>
+      <div class="big" id="bnb-g-box" style="box-shadow:none;background:var(--paper);margin-top:16px">
         <p class="kicker">Netto in meno all'anno</p>
         <p class="num blur" aria-hidden="true">−0.000 €</p>
-        <p>Lasciaci nome ed email per vedere il risultato.</p>
+        <p id="bnb-g-text">Lasciaci nome ed email per vedere il risultato.</p>
       </div>
       <form id="bnb-form" novalidate style="margin-top:18px">
         <div><label class="fl" for="bnb-nome">Nome</label><input id="bnb-nome" name="nome" type="text" autocomplete="given-name" required></div>
@@ -421,6 +425,8 @@
         <p id="bnb-r-sub"></p>
       </div>
 
+      <div class="piva-note" id="bnb-piva" hidden><p>Con la partita IVA <b>la cedolare secca non si applica</b>: le tasse dipendono dal tuo regime, forfettario o ordinario, e cambia anche come si gestisce l'IVA sulle commissioni di Airbnb.</p><p style="margin-top:10px">Per questo un calcolo uguale per tutti ti darebbe un numero sbagliato. <b>Lorenzo guarda il tuo caso</b> e ti dice quanto ti costa davvero il cambio del 13 ottobre.</p></div>
+      <div id="bnb-calc-out">
       <div class="big">
         <p class="kicker">Il prezzo che tiene il tuo netto</p>
         <p class="num" id="bnb-r-price"></p>
@@ -437,7 +443,8 @@
         <tbody id="bnb-r-table"></tbody>
       </table>
 
-      <p class="question">Il conto dice <b>quanto</b> dovresti alzare il prezzo. La vera domanda è un'altra: <b>il tuo mercato accetterebbe quell'aumento?</b> È una valutazione da fare caso per caso.</p>
+      <p class="question" id="bnb-question">Il conto dice <b>quanto</b> dovresti alzare il prezzo. La vera domanda è un'altra: <b>il tuo mercato accetterebbe quell'aumento?</b> È una valutazione da fare caso per caso.</p>
+      </div>
 
       <div class="offer">
         <p class="kicker">Parliamone</p>
@@ -502,7 +509,8 @@
 
   root.querySelectorAll('[data-ced]').forEach(function(b){
     b.addEventListener('click', function(){
-      ced = parseFloat(b.getAttribute('data-ced'));
+      var v = b.getAttribute('data-ced');
+      ced = v === 'piva' ? 'piva' : parseFloat(v);
       root.querySelectorAll('[data-ced]').forEach(function(x){ x.setAttribute('aria-pressed', x === b); });
     });
   });
@@ -516,6 +524,16 @@
       var P = parseFloat(String(document.getElementById('bnb-prezzo').value).replace(',', '.'));
       var N = parseInt(document.getElementById('bnb-notti').value, 10);
       var err = document.getElementById('bnb-err1');
+      if (ced === 'piva') {
+        err.textContent = '';
+        dati = { P:P > 0 ? P : null, N:N > 0 ? N : null, ced:'piva', r:null };
+        document.getElementById('bnb-g-title').textContent = 'Con la partita IVA il conto cambia';
+        document.getElementById('bnb-g-box').hidden = true;
+        show('gate');
+        return;
+      }
+      document.getElementById('bnb-g-title').textContent = 'Ecco quanto perdi in un anno se non cambi niente';
+      document.getElementById('bnb-g-box').hidden = false;
       if (!(P > 0)) { err.textContent = 'Scrivi quanto paga l\'ospite per una notte.'; return; }
       if (!(N > 0 && N <= 366)) { err.textContent = 'Scrivi quante notti vendi in un anno (fino a 366).'; return; }
       err.textContent = '';
@@ -540,7 +558,12 @@
     var data = new URLSearchParams();
     data.append('nome', nome);
     data.append('email', email);
-    data.append('tags', CONFIG.tag);
+    data.append('tags', CONFIG.tag + (r ? '' : ',' + CONFIG.tag + '-piva'));
+    if (!r) {
+      data.append('cedolare', 'partita IVA');
+      if (dati.P) data.append('prezzo_notte', dati.P.toFixed(2));
+      if (dati.N) data.append('notti_anno', dati.N);
+    } else {
     data.append('prezzo_notte', dati.P.toFixed(2));
     data.append('notti_anno', dati.N);
     data.append('cedolare', Math.round(dati.ced*100) + '%');
@@ -550,6 +573,7 @@
     data.append('perdita_anno', (r.perdita*dati.N).toFixed(0));
     data.append('prezzo_consigliato', r.prezzo.toFixed(2));
     data.append('aumento_pct', (r.aumento*100).toFixed(1));
+    }
     var qs = new URLSearchParams(location.search);
     ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(function(k){ if (qs.get(k)) data.append(k, qs.get(k)); });
     data.append('pagina', location.href.split('?')[0]);
@@ -565,6 +589,14 @@
 
   function renderResult(){
     var r = dati.r, N = dati.N;
+    document.getElementById('bnb-piva').hidden = !!r;
+    document.getElementById('bnb-calc-out').hidden = !r;
+    if (!r) {
+      document.getElementById('bnb-r-title').textContent = 'Con la partita IVA serve un conto su misura';
+      document.getElementById('bnb-r-sub').textContent = 'Il cambio di Airbnb tocca anche te, ma in modo diverso da chi è in cedolare.';
+      show('result');
+      return;
+    }
     document.getElementById('bnb-r-title').textContent = 'Perdi ' + eur(r.perdita*N, 0) + ' all\'anno';
     document.getElementById('bnb-r-sub').textContent = 'Se dal 13 ottobre l\'ospite paga ancora ' + eur(dati.P, 0) + ' a notte, il tuo netto scende così.';
     document.getElementById('bnb-r-price').textContent = eur(r.prezzo, 0);
